@@ -114,23 +114,105 @@ export class PresetsModule {
       1
     );
 
-    const rawPresets =
-      response?.PtzPreset?.preset ??
-      response?.PtzPreset ??
-      response?.preset ??
-      response?.Presets ??
-      [];
+    // Debug: log the raw response to help diagnose issues
+    const debug = (this.client as any).debug;
+    if (debug) {
+      console.error("[PresetsModule] Raw GetPtzPreset response:", JSON.stringify(response, null, 2));
+    }
 
-    if (!Array.isArray(rawPresets)) {
+    // Handle null/undefined response
+    if (!response) {
+      if (debug) {
+        console.warn("[PresetsModule] GetPtzPreset returned null/undefined response");
+      }
       return [];
     }
 
-    return rawPresets.map((preset) => ({
-      id: Number(preset.id),
-      name: String(preset.name ?? `Preset ${preset.id}`),
-      enable: Boolean(preset.enable ?? 1),
-      channel: Number(preset.channel ?? channel),
-    }));
+    // Try multiple possible response structures
+    // Expected format: { PtzPreset: { preset: [...] } }
+    let rawPresets: any = null;
+    
+    // Most common format: response.PtzPreset.preset (array)
+    if (response?.PtzPreset?.preset) {
+      rawPresets = response.PtzPreset.preset;
+    }
+    // Alternative: response.PtzPreset is directly an array
+    else if (Array.isArray(response?.PtzPreset)) {
+      rawPresets = response.PtzPreset;
+    }
+    // Alternative: response.preset (at root level)
+    else if (response?.preset) {
+      rawPresets = Array.isArray(response.preset) ? response.preset : [response.preset];
+    }
+    // Alternative: response.Presets (capitalized)
+    else if (response?.Presets) {
+      rawPresets = Array.isArray(response.Presets) ? response.Presets : [response.Presets];
+    }
+    // Alternative: response is directly an array
+    else if (Array.isArray(response)) {
+      rawPresets = response;
+    }
+    // Fallback: search for any array property that looks like presets
+    else if (response && typeof response === 'object') {
+      for (const key of Object.keys(response)) {
+        const value = response[key];
+        if (Array.isArray(value) && value.length > 0) {
+          // Check if first element looks like a preset (has id property)
+          if (value[0] && typeof value[0] === 'object' && ('id' in value[0] || 'ID' in value[0])) {
+            rawPresets = value;
+            break;
+          }
+        }
+        // Also check nested objects like { PtzPreset: { preset: [...] } }
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+          if (value.preset && Array.isArray(value.preset)) {
+            rawPresets = value.preset;
+            break;
+          }
+          if (value.Preset && Array.isArray(value.Preset)) {
+            rawPresets = value.Preset;
+            break;
+          }
+        }
+      }
+    }
+
+    // Default to empty array if nothing found
+    if (!rawPresets || !Array.isArray(rawPresets)) {
+      // Log when we get unexpected response format (only if we got a response but couldn't parse it)
+      if (response && typeof response === 'object' && Object.keys(response).length > 0) {
+        console.warn("[PresetsModule] GetPtzPreset returned unexpected response format:", {
+          channel,
+          responseKeys: Object.keys(response || {}),
+          rawPresetsType: typeof rawPresets,
+          fullResponse: JSON.stringify(response, null, 2),
+        });
+      }
+      rawPresets = [];
+    }
+
+    if (debug) {
+      console.error(`[PresetsModule] Parsed ${rawPresets.length} presets from response`);
+    }
+
+    // Map presets, filtering out any invalid entries
+    return rawPresets
+      .filter((preset: any) => preset != null && (preset.id != null || preset.ID != null))
+      .map((preset: any) => {
+        const id = Number(preset.id ?? preset.ID ?? 0);
+        const name = String(preset.name ?? preset.Name ?? `Preset ${id}`);
+        const enable = preset.enable != null 
+          ? Boolean(preset.enable === 1 || preset.enable === true) 
+          : true; // Default to enabled if not specified
+        const presetChannel = Number(preset.channel ?? preset.Channel ?? channel);
+        
+        return {
+          id,
+          name,
+          enable,
+          channel: presetChannel,
+        };
+      });
   }
 
   async setPreset(

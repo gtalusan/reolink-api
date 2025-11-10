@@ -173,7 +173,12 @@ async function main(): Promise<void> {
   const username = process.env.REOLINK_NVR_USER || "admin";
   const password = process.env.REOLINK_NVR_PASS || "password";
 
-  const client = new ReolinkClient({ host, username, password });
+  const client = new ReolinkClient({ 
+    host, 
+    username, 
+    password,
+    debug: true, // Enable debug logging to see API requests/responses
+  });
   const presets = new PresetsModule(client);
   const zonesStore = new ZoneStore(ZONE_STORE_PATH);
 
@@ -189,6 +194,11 @@ async function main(): Promise<void> {
 
     const requestUrl = new URL(req.url, `http://${req.headers.host}`);
     const pathname = requestUrl.pathname;
+    
+    // Log all API requests for debugging
+    if (pathname.startsWith("/api/")) {
+      console.log(`[preset-editor] ${req.method} ${pathname}${requestUrl.search}`);
+    }
 
     if (pathname.startsWith("/api/")) {
       try {
@@ -196,9 +206,16 @@ async function main(): Promise<void> {
           const channel = Number(
             requestUrl.searchParams.get("channel") ?? DEFAULT_CHANNEL
           );
-          const list = await presets.listPresets(channel);
-          const stored = await zonesStore.list(channel);
-          sendJson(res, { presets: list, storedZones: stored });
+          console.log(`[preset-editor] Fetching presets for channel ${channel}`);
+          try {
+            const list = await presets.listPresets(channel);
+            console.log(`[preset-editor] Found ${list.length} presets:`, list);
+            const stored = await zonesStore.list(channel);
+            sendJson(res, { presets: list, storedZones: stored });
+          } catch (error) {
+            console.error(`[preset-editor] Error fetching presets:`, error);
+            throw error;
+          }
           return;
         }
 

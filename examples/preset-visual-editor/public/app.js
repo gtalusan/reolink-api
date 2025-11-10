@@ -26,6 +26,165 @@ const clearZoneButton = document.getElementById("clearZone");
 const fillZoneButton = document.getElementById("fillZone");
 const saveZoneButton = document.getElementById("saveZone");
 
+class ZoneEditor {
+  constructor(canvas, metaEl) {
+    this.canvas = canvas;
+    this.metaEl = metaEl;
+    this.width = 0;
+    this.height = 0;
+    this.bits = [];
+    this.painting = false;
+    this.paintValue = 1;
+    this.cellSize = 8;
+    this.canvas.addEventListener("pointerdown", (event) => this.onPointerDown(event));
+    this.canvas.addEventListener("pointermove", (event) => this.onPointerMove(event));
+    this.canvas.addEventListener("pointerup", (event) => this.onPointerUp(event));
+    window.addEventListener("pointerup", () => (this.painting = false));
+    this.updateMeta();
+  }
+
+  reset() {
+    this.width = 0;
+    this.height = 0;
+    this.bits = [];
+    const ctx = this.canvas.getContext("2d");
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.updateMeta();
+  }
+
+  setGrid(area, source = "device") {
+    this.width = area.width;
+    this.height = area.height;
+    this.bits = Array.from(area.bits, (c) => (c === "1" ? 1 : 0));
+    this.resizeCanvas();
+    this.draw();
+    this.metaEl.innerHTML = `
+      <div><strong>Source:</strong> ${source === "stored" ? "Stored preset zones" : "Device configuration"}</div>
+      <div><strong>Resolution:</strong> ${this.width} × ${this.height}</div>
+      <div><strong>Coverage:</strong> ${this.coverage().toFixed(1)}%</div>
+    `;
+  }
+
+  resizeCanvas() {
+    const maxWidth = 720;
+    const maxHeight = 480;
+    this.cellSize = Math.max(
+      4,
+      Math.floor(Math.min(maxWidth / this.width, maxHeight / this.height))
+    );
+    this.canvas.width = this.width * this.cellSize;
+    this.canvas.height = this.height * this.cellSize;
+  }
+
+  draw() {
+    const ctx = this.canvas.getContext("2d");
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    ctx.fillStyle = "rgba(59, 130, 246, 0.65)";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+    ctx.lineWidth = 1;
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        const index = y * this.width + x;
+        if (this.bits[index]) {
+          ctx.fillRect(
+            x * this.cellSize,
+            y * this.cellSize,
+            this.cellSize,
+            this.cellSize
+          );
+        }
+        ctx.strokeRect(
+          x * this.cellSize,
+          y * this.cellSize,
+          this.cellSize,
+          this.cellSize
+        );
+      }
+    }
+    this.updateMeta();
+  }
+
+  onPointerDown(event) {
+    if (this.width === 0 || this.height === 0) return;
+    this.canvas.setPointerCapture(event.pointerId);
+    const { x, y } = this.getCellFromEvent(event);
+    if (x === null) return;
+    const index = y * this.width + x;
+    this.paintValue = this.bits[index] ? 0 : 1;
+    this.painting = true;
+    this.setCell(x, y, this.paintValue);
+  }
+
+  onPointerMove(event) {
+    if (!this.painting) return;
+    const { x, y } = this.getCellFromEvent(event);
+    if (x === null) return;
+    this.setCell(x, y, this.paintValue);
+  }
+
+  onPointerUp(event) {
+    this.painting = false;
+    try {
+      this.canvas.releasePointerCapture(event.pointerId);
+    } catch {
+      // ignore
+    }
+  }
+
+  getCellFromEvent(event) {
+    const rect = this.canvas.getBoundingClientRect();
+    const x = Math.floor((event.clientX - rect.left) / this.cellSize);
+    const y = Math.floor((event.clientY - rect.top) / this.cellSize);
+    if (x < 0 || y < 0 || x >= this.width || y >= this.height) {
+      return { x: null, y: null };
+    }
+    return { x, y };
+  }
+
+  setCell(x, y, value) {
+    const index = y * this.width + x;
+    if (this.bits[index] === value) return;
+    this.bits[index] = value;
+    this.draw();
+  }
+
+  fill(value) {
+    if (this.width === 0 || this.height === 0) return;
+    this.bits.fill(value ? 1 : 0);
+    this.draw();
+  }
+
+  coverage() {
+    if (this.bits.length === 0) return 0;
+    const active = this.bits.reduce((sum, bit) => sum + (bit ? 1 : 0), 0);
+    return (active / this.bits.length) * 100;
+  }
+
+  updateMeta() {
+    if (!this.metaEl) return;
+    if (this.bits.length === 0) {
+      this.metaEl.innerHTML = "<div>Select a preset to edit its zones.</div>";
+      return;
+    }
+    this.metaEl.innerHTML = `
+      <div><strong>Resolution:</strong> ${this.width} × ${this.height}</div>
+      <div><strong>Coverage:</strong> ${this.coverage().toFixed(1)}%</div>
+      <div class="muted">Click and drag to toggle grid cells.</div>
+    `;
+  }
+
+  toGridArea() {
+    if (this.bits.length === 0) {
+      throw new Error("No zone grid loaded");
+    }
+    return {
+      width: this.width,
+      height: this.height,
+      bits: this.bits.map((bit) => (bit ? "1" : "0")).join(""),
+    };
+  }
+}
+
 const zoneEditor = new ZoneEditor(zoneCanvas, zoneMeta);
 
 function updateStatus(message, variant = "info") {
@@ -287,165 +446,6 @@ function initEvents() {
   });
   saveZoneButton.addEventListener("click", () => saveZones(false));
   refreshPanoramaButton.addEventListener("click", () => capturePanorama());
-}
-
-class ZoneEditor {
-  constructor(canvas, metaEl) {
-    this.canvas = canvas;
-    this.metaEl = metaEl;
-    this.width = 0;
-    this.height = 0;
-    this.bits = [];
-    this.painting = false;
-    this.paintValue = 1;
-    this.cellSize = 8;
-    this.canvas.addEventListener("pointerdown", (event) => this.onPointerDown(event));
-    this.canvas.addEventListener("pointermove", (event) => this.onPointerMove(event));
-    this.canvas.addEventListener("pointerup", (event) => this.onPointerUp(event));
-    window.addEventListener("pointerup", () => (this.painting = false));
-    this.updateMeta();
-  }
-
-  reset() {
-    this.width = 0;
-    this.height = 0;
-    this.bits = [];
-    const ctx = this.canvas.getContext("2d");
-    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    this.updateMeta();
-  }
-
-  setGrid(area, source = "device") {
-    this.width = area.width;
-    this.height = area.height;
-    this.bits = Array.from(area.bits, (c) => (c === "1" ? 1 : 0));
-    this.resizeCanvas();
-    this.draw();
-    this.metaEl.innerHTML = `
-      <div><strong>Source:</strong> ${source === "stored" ? "Stored preset zones" : "Device configuration"}</div>
-      <div><strong>Resolution:</strong> ${this.width} × ${this.height}</div>
-      <div><strong>Coverage:</strong> ${this.coverage().toFixed(1)}%</div>
-    `;
-  }
-
-  resizeCanvas() {
-    const maxWidth = 720;
-    const maxHeight = 480;
-    this.cellSize = Math.max(
-      4,
-      Math.floor(Math.min(maxWidth / this.width, maxHeight / this.height))
-    );
-    this.canvas.width = this.width * this.cellSize;
-    this.canvas.height = this.height * this.cellSize;
-  }
-
-  draw() {
-    const ctx = this.canvas.getContext("2d");
-    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    ctx.fillStyle = "rgba(59, 130, 246, 0.65)";
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
-    ctx.lineWidth = 1;
-    for (let y = 0; y < this.height; y++) {
-      for (let x = 0; x < this.width; x++) {
-        const index = y * this.width + x;
-        if (this.bits[index]) {
-          ctx.fillRect(
-            x * this.cellSize,
-            y * this.cellSize,
-            this.cellSize,
-            this.cellSize
-          );
-        }
-        ctx.strokeRect(
-          x * this.cellSize,
-          y * this.cellSize,
-          this.cellSize,
-          this.cellSize
-        );
-      }
-    }
-    this.updateMeta();
-  }
-
-  onPointerDown(event) {
-    if (this.width === 0 || this.height === 0) return;
-    this.canvas.setPointerCapture(event.pointerId);
-    const { x, y } = this.getCellFromEvent(event);
-    if (x === null) return;
-    const index = y * this.width + x;
-    this.paintValue = this.bits[index] ? 0 : 1;
-    this.painting = true;
-    this.setCell(x, y, this.paintValue);
-  }
-
-  onPointerMove(event) {
-    if (!this.painting) return;
-    const { x, y } = this.getCellFromEvent(event);
-    if (x === null) return;
-    this.setCell(x, y, this.paintValue);
-  }
-
-  onPointerUp(event) {
-    this.painting = false;
-    try {
-      this.canvas.releasePointerCapture(event.pointerId);
-    } catch {
-      // ignore
-    }
-  }
-
-  getCellFromEvent(event) {
-    const rect = this.canvas.getBoundingClientRect();
-    const x = Math.floor((event.clientX - rect.left) / this.cellSize);
-    const y = Math.floor((event.clientY - rect.top) / this.cellSize);
-    if (x < 0 || y < 0 || x >= this.width || y >= this.height) {
-      return { x: null, y: null };
-    }
-    return { x, y };
-  }
-
-  setCell(x, y, value) {
-    const index = y * this.width + x;
-    if (this.bits[index] === value) return;
-    this.bits[index] = value;
-    this.draw();
-  }
-
-  fill(value) {
-    if (this.width === 0 || this.height === 0) return;
-    this.bits.fill(value ? 1 : 0);
-    this.draw();
-  }
-
-  coverage() {
-    if (this.bits.length === 0) return 0;
-    const active = this.bits.reduce((sum, bit) => sum + (bit ? 1 : 0), 0);
-    return (active / this.bits.length) * 100;
-  }
-
-  updateMeta() {
-    if (!this.metaEl) return;
-    if (this.bits.length === 0) {
-      this.metaEl.innerHTML = "<div>Select a preset to edit its zones.</div>";
-      return;
-    }
-    this.metaEl.innerHTML = `
-      <div><strong>Resolution:</strong> ${this.width} × ${this.height}</div>
-      <div><strong>Coverage:</strong> ${this.coverage().toFixed(1)}%</div>
-      <div class="muted">Click and drag to toggle grid cells.</div>
-    `;
-  }
-
-  toGridArea() {
-    if (this.bits.length === 0) {
-      throw new Error("No zone grid loaded");
-    }
-    return {
-      width: this.width,
-      height: this.height,
-      bits: this.bits.map((bit) => (bit ? "1" : "0")).join(""),
-    };
-  }
 }
 
 initEvents();

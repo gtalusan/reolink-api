@@ -6,6 +6,7 @@
  */
 
 import https from "https";
+import { fetch as undiciFetch, Agent as UndiciAgent } from "undici";
 import {
   ReolinkRequest,
   ReolinkResponse,
@@ -53,7 +54,8 @@ export class ReolinkClient {
   private tokenLeaseTime: number = 3600; // Default 3600 seconds (1 hour)
   private tokenExpiryTime: number = 0; // Timestamp when token expires
   private url: string;
-  private fetchImpl: typeof fetch;
+  private fetchImpl: (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+  private useUndiciFetch: boolean;
   private closed: boolean = false;
   private eventEmitters: Set<ReolinkEventEmitter> = new Set();
 
@@ -64,7 +66,15 @@ export class ReolinkClient {
     this.mode = options.mode ?? "long";
     this.insecure = options.insecure ?? true; // Default to insecure (curl -k equivalent)
     this.debug = options.debug ?? false;
-    this.fetchImpl = options.fetch ?? fetch;
+    // Use undici fetch when insecure mode is enabled (it supports dispatcher option)
+    // Otherwise use the provided fetch or default to global fetch
+    if (options.fetch) {
+      this.fetchImpl = options.fetch;
+      this.useUndiciFetch = false;
+    } else {
+      this.fetchImpl = (this.insecure ? undiciFetch : fetch) as typeof fetch;
+      this.useUndiciFetch = this.insecure;
+    }
     this.url = `https://${this.host}/cgi-bin/api.cgi`;
   }
 
@@ -124,10 +134,21 @@ export class ReolinkClient {
 
       // Create an HTTPS agent that ignores certificate errors (equivalent to curl -k)
       if (this.insecure) {
-        const agent = new https.Agent({
-          rejectUnauthorized: false,
-        });
-        (fetchOptions as { agent?: https.Agent }).agent = agent;
+        if (this.useUndiciFetch) {
+          // Use undici's dispatcher for undici fetch
+          const dispatcher = new UndiciAgent({
+            connect: {
+              rejectUnauthorized: false,
+            },
+          });
+          (fetchOptions as { dispatcher?: UndiciAgent }).dispatcher = dispatcher;
+        } else {
+          // Use Node.js https agent for other fetch implementations
+          const agent = new https.Agent({
+            rejectUnauthorized: false,
+          });
+          (fetchOptions as { agent?: https.Agent }).agent = agent;
+        }
       }
 
       const response = await this.fetchImpl(target, fetchOptions);
@@ -206,10 +227,21 @@ export class ReolinkClient {
     };
 
     if (this.insecure) {
-      const agent = new https.Agent({
-        rejectUnauthorized: false,
-      });
-      (fetchOptions as { agent?: https.Agent }).agent = agent;
+      if (this.fetchImpl === undiciFetch) {
+        // Use undici's dispatcher for undici fetch
+        const dispatcher = new UndiciAgent({
+          connect: {
+            rejectUnauthorized: false,
+          },
+        });
+        (fetchOptions as { dispatcher?: UndiciAgent }).dispatcher = dispatcher;
+      } else {
+        // Use Node.js https agent for other fetch implementations
+        const agent = new https.Agent({
+          rejectUnauthorized: false,
+        });
+        (fetchOptions as { agent?: https.Agent }).agent = agent;
+      }
     }
 
     const response = await this.fetchImpl(target, fetchOptions);
@@ -387,10 +419,21 @@ export class ReolinkClient {
     };
 
     if (this.insecure) {
-      const agent = new https.Agent({
-        rejectUnauthorized: false,
-      });
-      (fetchOptions as { agent?: https.Agent }).agent = agent;
+      if (this.fetchImpl === undiciFetch) {
+        // Use undici's dispatcher for undici fetch
+        const dispatcher = new UndiciAgent({
+          connect: {
+            rejectUnauthorized: false,
+          },
+        });
+        (fetchOptions as { dispatcher?: UndiciAgent }).dispatcher = dispatcher;
+      } else {
+        // Use Node.js https agent for other fetch implementations
+        const agent = new https.Agent({
+          rejectUnauthorized: false,
+        });
+        (fetchOptions as { agent?: https.Agent }).agent = agent;
+      }
     }
 
     const response = await this.fetchImpl(target, fetchOptions);
