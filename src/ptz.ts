@@ -8,11 +8,14 @@ import { ReolinkHttpError, ReolinkResponse, ReolinkResponseError } from "./types
 export interface PtzPreset {
   id: number;
   name?: string;
+  enable?: number;
+  channel?: number;
   [key: string]: unknown;
 }
 
 export interface PtzPresetResponse {
-  preset?: PtzPreset[];
+  PtzPreset?: PtzPreset[];
+  preset?: PtzPreset[]; // Legacy format
   [key: string]: unknown;
 }
 
@@ -110,9 +113,16 @@ export async function getPtzPreset(
   client: ReolinkClient,
   channel: number
 ): Promise<PtzPresetResponse> {
-  return client.api<PtzPresetResponse>("GetPtzPreset", {
+  const response = await client.api<PtzPresetResponse>("GetPtzPreset", {
     channel,
   });
+  
+  // Normalize response - some devices use PtzPreset, others use preset
+  if (response.PtzPreset && !response.preset) {
+    response.preset = response.PtzPreset;
+  }
+  
+  return response;
 }
 
 /**
@@ -147,7 +157,11 @@ export async function ptzCtrl(
     apiParams.speed = params.speed;
   }
 
-  if (params.op === "GotoPreset" || params.op === "SetPreset") {
+  // GotoPreset operation uses ToPos with cmdStr
+  if (params.op === "GotoPreset" && params.presetId !== undefined) {
+    apiParams.op = "ToPos";
+    apiParams.cmdStr = `ToPos=${params.presetId}`;
+  } else if (params.op === "SetPreset") {
     if (params.presetId !== undefined) {
       apiParams.id = params.presetId;
     }
