@@ -1,5 +1,5 @@
 {
-  "name": "reolink-api",
+  "name": "reolink-nvr-api",
   "version": "0.1.0",
   "description": "TypeScript SDK and CLI for Reolink NVR/Camera HTTP API - Control PTZ, snapshots, streams, playback, AI detection, and more",
   "type": "module",

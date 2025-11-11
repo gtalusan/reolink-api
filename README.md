@@ -1,34 +1,77 @@
-# Reolink API SDK
+<div align="center">
 
-A robust Node.js/TypeScript SDK and CLI for interacting with Reolink NVR and camera devices via their HTTP/JSON CGI API.
+# 🎥 Reolink NVR API
 
-## Features
+**A comprehensive TypeScript SDK and CLI for Reolink NVR and IP Camera devices**
 
-- ✅ **Type-safe API client** with full TypeScript support
-- ✅ **Long and short connection modes** (token-based sessions or per-request auth)
-- ✅ **Automatic token refresh** for seamless long sessions
-- ✅ **Comprehensive CLI** with intuitive commands
-- ✅ **Streaming URL helpers** for RTSP, RTMP, FLV, and playback
-- ✅ **Record search and download** for VOD workflows
-- ✅ **PTZ control** for presets and patrol
-- ✅ **AI and alarm state** monitoring
-- ✅ **Snapshot capture** for fast image capture
-- ✅ **Event polling** for real-time motion/AI detection
-- ✅ **Playback stream control** for time-based video review
-- ✅ **Well-tested** with unit tests
+[![npm version](https://badge.fury.io/js/reolink-nvr-api.svg)](https://www.npmjs.com/package/reolink-nvr-api)
+[![npm downloads](https://img.shields.io/npm/dm/reolink-nvr-api.svg)](https://www.npmjs.com/package/reolink-nvr-api)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Quick Start
+[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Examples](#-examples) • [CLI](#-cli-tool)
 
-### Installation
+</div>
+
+---
+
+## ✨ Features
+
+### 🔐 **Authentication & Sessions**
+- Token-based session management with automatic refresh
+- Short-lived request authentication
+- Secure credential handling
+- SSL/TLS support with self-signed certificate handling
+
+### 📹 **Camera Control**
+- **PTZ Control** - Pan, tilt, zoom, presets, and patrol routes
+- **Snapshots** - Capture high-quality JPEG images
+- **Live Streaming** - Generate RTSP, RTMP, and FLV URLs
+- **Playback** - Time-based video playback control
+
+### 🤖 **AI & Detection**
+- Person detection monitoring
+- Vehicle detection support
+- Pet detection capabilities
+- Motion detection state polling
+- Real-time event notifications
+
+### 📊 **Device Management**
+- Device information and capabilities
+- Encoding configuration (resolution, codec, FPS, bitrate)
+- Multi-channel support for NVRs
+- Channel status monitoring
+
+### 🎬 **Recording & Playback**
+- Record search by time range
+- Video download capabilities
+- Playback stream control (start, stop, seek)
+- Support for main and sub-streams
+
+### 🛠️ **Developer Experience**
+- **Full TypeScript support** with comprehensive type definitions
+- **Modular exports** - Import only what you need
+- **Event-driven architecture** for real-time monitoring
+- **Well-tested** with extensive unit tests
+- **Detailed documentation** and examples
+
+---
+
+## 📦 Installation
 
 ```bash
-npm install reolink-api
+npm install reolink-nvr-api
 ```
+
+**Requirements:** Node.js >= 18.0.0
+
+---
+
+## 🚀 Quick Start
 
 ### Basic Usage
 
 ```typescript
-import { ReolinkClient } from "reolink-api";
+import { ReolinkClient } from "reolink-nvr-api";
 
 const client = new ReolinkClient({
   host: "192.168.1.100",
@@ -36,18 +79,311 @@ const client = new ReolinkClient({
   password: "your-password",
 });
 
-// Login (automatic in long mode)
 await client.login();
 
-// Get device info
+// Get device information
 const devInfo = await client.api("GetDevInfo");
 console.log(devInfo);
 
-// Close session
+// Capture a snapshot
+const snapshot = await client.snapshotToBuffer(0); // channel 0
+await client.snapshotToFile("snapshot.jpg", 0);
+
 await client.close();
 ```
 
-### CLI Usage
+### PTZ Control
+
+```typescript
+import { ptzCtrl, getPtzPreset } from "reolink-nvr-api/ptz";
+
+// Get available presets
+const presets = await getPtzPreset(client, 0);
+console.log(presets);
+
+// Move to preset
+await ptzCtrl(client, {
+  channel: 0,
+  op: "GotoPreset",
+  presetId: 1,
+});
+
+// Pan right
+await ptzCtrl(client, {
+  channel: 0,
+  op: "Right",
+  speed: 20,
+});
+
+// Stop movement
+await ptzCtrl(client, { channel: 0, op: "Stop" });
+```
+
+### Event Monitoring
+
+```typescript
+import { ReolinkEventEmitter } from "reolink-nvr-api/events";
+
+const emitter = new ReolinkEventEmitter(client, {
+  channels: [0, 1], // Monitor channels 0 and 1
+  interval: 1000,   // Poll every second
+});
+
+emitter.on("motion", (channel, state) => {
+  console.log(`Motion detected on channel ${channel}:`, state);
+});
+
+emitter.on("ai", (channel, state) => {
+  console.log(`AI detection on channel ${channel}:`, state);
+});
+
+emitter.start();
+```
+
+### Streaming URLs
+
+```typescript
+import { rtspUrl, rtmpUrl, flvUrl } from "reolink-nvr-api/stream";
+
+// Generate RTSP URL
+const rtsp = rtspUrl({
+  user: "admin",
+  pass: "password",
+  host: "192.168.1.100",
+  channel: 0,
+  h265: true, // Use H.265 codec
+});
+
+// Generate FLV URL
+const flv = flvUrl({
+  token: client.getToken(),
+  user: "admin",
+  host: "192.168.1.100",
+  channel: 0,
+  streamType: "main",
+});
+```
+
+---
+
+## 📚 Documentation
+
+### Core Modules
+
+| Module | Description | Import |
+|--------|-------------|--------|
+| **Client** | Main API client | `reolink-nvr-api` |
+| **PTZ** | Pan-Tilt-Zoom control | `reolink-nvr-api/ptz` |
+| **Snapshot** | Image capture | `reolink-nvr-api/snapshot` |
+| **Stream** | URL generation | `reolink-nvr-api/stream` |
+| **Events** | Event monitoring | `reolink-nvr-api/events` |
+| **Playback** | Video playback | `reolink-nvr-api/playback` |
+| **Record** | Search & download | `reolink-nvr-api/record` |
+| **AI** | AI detection | `reolink-nvr-api/ai` |
+| **Alarm** | Motion detection | `reolink-nvr-api/alarm` |
+
+### Detailed Documentation
+
+For comprehensive API documentation, see [USAGE.md](./USAGE.md)
+
+---
+
+## 💡 Examples
+
+The repository includes several practical examples:
+
+### 📸 **Snapshot Capture**
+```bash
+npx tsx examples/streaming.ts
+```
+Demonstrates generating streaming URLs for RTSP, RTMP, FLV, and playback.
+
+### 🎮 **PTZ Control**
+```bash
+npx tsx examples/ptz.ts
+```
+Shows PTZ movement, presets, guard mode, and patrol routes.
+
+### 📊 **Device Status**
+```bash
+npx tsx examples/status.ts
+```
+Queries device information, abilities, and encoding configuration.
+
+### 📹 **Camera Enumeration**
+```bash
+npx tsx examples/cameras.ts
+```
+Lists all cameras with their capabilities, encoding settings, and status.
+
+### 🛠️ **Extra Tools**
+
+The `extras/` directory contains advanced tools not included in the main package:
+
+- **360° Panorama** (`extras/panorama/`) - Capture full panoramas using PTZ cameras
+
+---
+
+## 🖥️ CLI Tool
+
+The package includes a powerful command-line interface:
+
+### Installation
+
+```bash
+# Global install
+npm install -g reolink-nvr-api
+
+# Or use with npx
+npx reolink-nvr-api [command]
+```
+
+### Configuration
+
+Set environment variables or use command-line flags:
+
+```bash
+export REOLINK_NVR_HOST="192.168.1.100"
+export REOLINK_NVR_USER="admin"
+export REOLINK_NVR_PASS="password"
+```
+
+### Common Commands
+
+```bash
+# Device information
+reolink status devinfo
+reolink status ability
+reolink status enc --channel 0
+
+# Capture snapshot
+reolink snap --channel 0 --file snapshot.jpg
+
+# PTZ control
+reolink ptz list-presets --channel 0
+reolink ptz goto 1 --channel 0
+
+# Stream URLs
+reolink stream url rtsp --channel 0 --codec h265
+reolink stream url flv --channel 0
+
+# Event listening
+reolink events listen --interval 1000
+
+# Record search
+reolink rec search --channel 0 --start "2025-01-01T00:00:00Z" --end "2025-01-01T23:59:59Z"
+
+# Check device capabilities
+reolink capabilities
+```
+
+### CLI Help
+
+```bash
+reolink --help
+```
+
+---
+
+## 🔧 API Client Options
+
+```typescript
+const client = new ReolinkClient({
+  host: "192.168.1.100",        // Device IP or hostname
+  username: "admin",             // Username
+  password: "password",          // Password
+  mode: "long",                  // "long" (session) or "short" (per-request)
+  insecure: true,               // Allow self-signed certificates
+  debug: false,                  // Enable debug logging
+  timeout: 30000,                // Request timeout (ms)
+});
+```
+
+---
+
+## 🏗️ Advanced Usage
+
+### Custom API Calls
+
+```typescript
+// Direct API call
+const response = await client.api("GetDevInfo", {});
+
+// With parameters
+const enc = await client.api("GetEnc", {
+  channel: 0,
+  action: 1,
+});
+```
+
+### Playback Control
+
+```typescript
+const controller = client.createPlaybackController();
+
+// Start playback
+await controller.startPlayback(0, "2025-01-01T09:00:00Z");
+
+// Seek to different time
+await controller.seekPlayback(0, "2025-01-01T09:15:00Z");
+
+// Stop playback
+await controller.stopPlayback(0);
+```
+
+### Guard Mode & Patrol
+
+```typescript
+import { getPtzGuard, setPtzGuard, startPatrol } from "reolink-nvr-api/ptz";
+
+// Enable guard mode
+await setPtzGuard(client, 0, {
+  benable: 1,
+  timeout: 60, // Return to guard position after 60s
+});
+
+// Start patrol route
+await startPatrol(client, 0, 0); // channel 0, patrol route 0
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+---
+
+## 📄 License
+
+MIT License - see [LICENSE](./LICENSE) file for details
+
+---
+
+## ⚠️ Device Compatibility
+
+This SDK has been tested with various Reolink NVR and camera models. Some features may not be available on all devices:
+
+- **Playback control** (`PlaybackStart`, `PlaybackStop`, `PlaybackSeek`) may not be supported on some NVR models
+- **PTZ features** require PTZ-capable cameras
+- **AI detection** requires cameras with AI capabilities
+- Check device capabilities using `getAbility()` or the CLI command `reolink capabilities`
+
+---
+
+## 🙏 Acknowledgments
+
+Built with TypeScript and tested with Vitest. Inspired by the need for a modern, type-safe Reolink API client.
+
+---
+
+<div align="center">
+
+**[⬆ Back to Top](#-reolink-nvr-api)**
+
+Made with ❤️ for the Reolink community
+
+</div>
 
 Set environment variables:
 
