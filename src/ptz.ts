@@ -21,7 +21,7 @@ export interface PtzPresetResponse {
 
 export interface PtzCtrlParams {
   channel: number;
-  op: "ToPos" | "Start" | "Stop" | "SetPreset" | "GotoPreset";
+  op: "ToPos" | "Start" | "Stop" | "SetPreset" | "GotoPreset" | "Left" | "Right" | "Up" | "Down" | "ZoomInc" | "ZoomDec" | "FocusInc" | "FocusDec";
   speed?: number;
   presetId?: number;
   x?: number;

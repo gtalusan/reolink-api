@@ -37,6 +37,9 @@ scripts/
 # Snapshots directory
 snapshots/
 
+# Extras output
+extras/**/output/
+
 # Test config files
 patrol-test-config.json
 
