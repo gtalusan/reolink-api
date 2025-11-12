@@ -65,22 +65,18 @@ vi.mock("./snapshot.js", () => ({
 describe("CLI", () => {
   let originalArgv: string[];
   let originalEnv: NodeJS.ProcessEnv;
-  let consoleLogSpy: any;
-  let consoleErrorSpy: any;
-  let processExitSpy: any;
-  let stdoutWriteSpy: any;
 
   beforeEach(() => {
     originalArgv = process.argv;
     originalEnv = { ...process.env };
     
     // Spy on console methods
-    consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    processExitSpy = vi.spyOn(process, "exit").mockImplementation((code) => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(process, "exit").mockImplementation((code) => {
       throw new Error(`process.exit(${code})`);
     });
-    stdoutWriteSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
     
     // Setup default environment
     process.env.REOLINK_NVR_HOST = "192.168.1.100";
