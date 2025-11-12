@@ -7,13 +7,15 @@ src/
 
 # Tests
 tests/
-*.test.ts
-*.test.js
-*.test.d.ts
-*.test.d.ts.map
-*.test.js.map
+**/*.test.ts
+**/*.test.js
+**/*.test.d.ts
+**/*.test.d.ts.map
+**/*.test.js.map
 vitest.config.ts
+vitest.setup.ts
 .vitest/
+coverage/
 
 # Development
 node_modules/

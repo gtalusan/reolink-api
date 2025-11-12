@@ -55,8 +55,8 @@
     "reolink": "./dist/cli.js"
   },
   "scripts": {
-    "build": "tsc",
-    "build:clean": "tsc && rm -f dist/**/*.test.* dist/*.test.*",
+    "build": "tsc -p tsconfig.build.json",
+    "build:clean": "rm -rf dist && npm run build",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
