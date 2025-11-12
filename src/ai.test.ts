@@ -7,6 +7,8 @@ import { ReolinkClient } from "./reolink.js";
 import { getAiCfg, getAiState } from "./ai.js";
 import { ReolinkHttpError } from "./types.js";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 describe("AI endpoints", () => {
   let mockFetch: ReturnType<typeof vi.fn>;
   let client: ReolinkClient;
@@ -92,7 +94,7 @@ describe("AI endpoints", () => {
       const [, requestArgs] = mockFetch.mock.calls[1];
       const body = JSON.parse(String(requestArgs?.body ?? "[]"));
       expect(body[0].param).toEqual({ channel: 3 });
-      expect((result as AiCfgResult).AiCfg.channel).toBe(3);
+      expect((result as any).AiCfg.channel).toBe(3);
     });
 
     it("should handle empty or minimal AI configuration", async () => {
@@ -117,7 +119,7 @@ describe("AI endpoints", () => {
       const result = await getAiCfg(client, 0);
 
       expect(result).toHaveProperty("AiCfg");
-      expect((result as Record<string, unknown>).AiCfg.channel).toBe(0);
+      expect((result as any).AiCfg.channel).toBe(0);
     });
 
     it("should handle AI configuration with multiple detection types", async () => {
@@ -145,10 +147,10 @@ describe("AI endpoints", () => {
       await client.login();
       const result = await getAiCfg(client, 0);
 
-      expect((result as Record<string, unknown>).AiCfg.people).toEqual({ enable: 1, sensitivity: 50 });
-      expect((result as Record<string, unknown>).AiCfg.vehicle).toEqual({ enable: 1, sensitivity: 60 });
-      expect((result as Record<string, unknown>).AiCfg.pet).toEqual({ enable: 0, sensitivity: 40 });
-      expect((result as Record<string, unknown>).AiCfg.face).toEqual({ enable: 1, sensitivity: 70 });
+      expect((result as any).AiCfg.people).toEqual({ enable: 1, sensitivity: 50 });
+      expect((result as any).AiCfg.vehicle).toEqual({ enable: 1, sensitivity: 60 });
+      expect((result as any).AiCfg.pet).toEqual({ enable: 0, sensitivity: 40 });
+      expect((result as any).AiCfg.face).toEqual({ enable: 1, sensitivity: 70 });
     });
   });
 
@@ -210,7 +212,7 @@ describe("AI endpoints", () => {
       const [, requestArgs] = mockFetch.mock.calls[1];
       const body = JSON.parse(String(requestArgs?.body ?? "[]"));
       expect(body[0].param).toEqual({ channel: 2 });
-      expect((result as Record<string, unknown>).AiState.channel).toBe(2);
+      expect((result as any).AiState.channel).toBe(2);
     });
 
     it("should throw ReolinkHttpError on API error", async () => {
@@ -270,9 +272,9 @@ describe("AI endpoints", () => {
       await client.login();
       const result = await getAiState(client, 0);
 
-      expect((result as Record<string, unknown>).AiState.people.alarmState).toBe(0);
-      expect((result as Record<string, unknown>).AiState.vehicle.alarmState).toBe(0);
-      expect((result as Record<string, unknown>).AiState.pet.alarmState).toBe(0);
+      expect((result as any).AiState.people.alarmState).toBe(0);
+      expect((result as any).AiState.vehicle.alarmState).toBe(0);
+      expect((result as any).AiState.pet.alarmState).toBe(0);
     });
 
     it("should handle active AI state (multiple alarms triggered)", async () => {
@@ -300,10 +302,10 @@ describe("AI endpoints", () => {
       await client.login();
       const result = await getAiState(client, 0);
 
-      expect((result as Record<string, unknown>).AiState.people.alarmState).toBe(1);
-      expect((result as Record<string, unknown>).AiState.vehicle.alarmState).toBe(1);
-      expect((result as Record<string, unknown>).AiState.pet.alarmState).toBe(0);
-      expect((result as Record<string, unknown>).AiState.face.alarmState).toBe(1);
+      expect((result as any).AiState.people.alarmState).toBe(1);
+      expect((result as any).AiState.vehicle.alarmState).toBe(1);
+      expect((result as any).AiState.pet.alarmState).toBe(0);
+      expect((result as any).AiState.face.alarmState).toBe(1);
     });
 
     it("should handle minimal AI state response", async () => {
@@ -328,7 +330,7 @@ describe("AI endpoints", () => {
       const result = await getAiState(client, 0);
 
       expect(result).toHaveProperty("AiState");
-      expect((result as Record<string, unknown>).AiState.channel).toBe(0);
+      expect((result as any).AiState.channel).toBe(0);
     });
   });
 
@@ -372,8 +374,8 @@ describe("AI endpoints", () => {
       const config = await getAiCfg(client, 0);
       const state = await getAiState(client, 0);
 
-      expect((config as Record<string, unknown>).AiCfg.people.enable).toBe(1);
-      expect((state as Record<string, unknown>).AiState.people.alarmState).toBe(1);
+      expect((config as any).AiCfg.people.enable).toBe(1);
+      expect((state as any).AiState.people.alarmState).toBe(1);
       expect(mockFetch).toHaveBeenCalledTimes(3);
     });
   });
