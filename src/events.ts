@@ -183,6 +183,9 @@ export class ReolinkEventEmitter extends EventEmitter {
         if (typeof state === "object" && state !== null && "state" in state) {
           return (state as { state?: number }).state === 1;
         }
+        if (typeof state === "object" && state !== null && "alarm_state" in state) {
+          return (state as { alarm_state?: number }).alarm_state === 1;
+        }
         return false;
       };
       
