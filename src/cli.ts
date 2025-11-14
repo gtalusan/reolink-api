@@ -56,6 +56,7 @@ function parseArgs() {
     pass?: string;
     mode?: ReolinkMode;
     insecure?: boolean;
+    plain?: boolean;
     debug?: boolean;
     timeout?: number;
     json?: boolean;
@@ -80,6 +81,8 @@ function parseArgs() {
       }
     } else if (arg === "--insecure") {
       config.insecure = true;
+    } else if (arg === "--plain") {
+      config.plain = true;
     } else if (arg === "--debug") {
       config.debug = true;
     } else if (arg === "--timeout" && i + 1 < args.length) {
@@ -114,6 +117,7 @@ const SHORT_MODE =
   parsed.mode === undefined; // Default to long if not specified
 const MODE: ReolinkMode = parsed.mode || (SHORT_MODE ? "short" : "long");
 const INSECURE = parsed.insecure ?? true; // Default to insecure
+const PLAIN = parsed.plain ?? false;
 // Timeout support reserved for future implementation
 const JSON_OUTPUT = parsed.json !== false; // Default to JSON
 const PRETTY = parsed.pretty || JSON_OUTPUT;
@@ -131,6 +135,7 @@ Options:
   --pass <pass>          Password (or REOLINK_NVR_PASS)
   --mode <long|short>    Connection mode (default: long)
   --insecure             Allow insecure SSL (default: true)
+  --plain                Use HTTP instead of HTTPS (default: false)
   --debug                Enable debug logging
   --timeout <ms>         Request timeout in milliseconds
   --json                 Output JSON (default)
@@ -180,6 +185,7 @@ const client = new ReolinkClient({
   password: PASS,
   mode: MODE,
   insecure: INSECURE,
+  plain: PLAIN,
   debug: DEBUG,
 });
 

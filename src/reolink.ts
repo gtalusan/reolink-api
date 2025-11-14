@@ -39,6 +39,7 @@ export interface ReolinkOptions {
   password: string;
   mode?: ReolinkMode;
   insecure?: boolean;
+  plain?: boolean;
   debug?: boolean;
   fetch?: typeof fetch;
 }
@@ -49,6 +50,7 @@ export class ReolinkClient {
   private password: string;
   private mode: ReolinkMode;
   private insecure: boolean;
+  private plain: boolean;
   private debug: boolean;
   private token: string = "null";
   private tokenLeaseTime: number = 3600; // Default 3600 seconds (1 hour)
@@ -65,6 +67,7 @@ export class ReolinkClient {
     this.password = options.password;
     this.mode = options.mode ?? "long";
     this.insecure = options.insecure ?? true; // Default to insecure (curl -k equivalent)
+    this.plain = options.plain ?? false;
     this.debug = options.debug ?? false;
     // Use undici fetch when insecure mode is enabled (it supports dispatcher option)
     // Otherwise use the provided fetch or default to global fetch
@@ -75,7 +78,7 @@ export class ReolinkClient {
       this.fetchImpl = (this.insecure ? undiciFetch : fetch) as typeof fetch;
       this.useUndiciFetch = this.insecure;
     }
-    this.url = `https://${this.host}/cgi-bin/api.cgi`;
+    this.url = `${this.plain ? 'http' : 'https'}://${this.host}/cgi-bin/api.cgi`;
   }
 
   /**
