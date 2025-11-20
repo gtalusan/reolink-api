@@ -11,7 +11,7 @@
  */
 
 import { ReolinkClient, ReolinkMode } from "./reolink.js";
-import { getAbility, getDevInfo, getEnc } from "./endpoints/system.js";
+import { getAbility, getDevInfo, getEnc, getChannelInfo, getChannelStatus } from "./endpoints/system.js";
 import {
   rtspUrl,
   rtmpUrl,
@@ -143,7 +143,7 @@ Options:
   --help                 Show this help
 
 Commands:
-  status <ability|devinfo|enc> [--channel N]
+  status <ability|devinfo|enc|channelinfo|channelstatus> [--channel N]
   stream url <rtsp|rtmp|flv> [--channel N] [--codec h264|h265] [--streamType main|sub]
   stream playback [--channel N] [--start ISO_TIMESTAMP] [--streamType main|sub]
   rec search [--channel N] [--start ISO_TIMESTAMP] [--end ISO_TIMESTAMP] [--streamType main|sub]
@@ -267,6 +267,10 @@ async function main() {
             result = await getAbility(client);
           } else if (subcmd === "devinfo") {
             result = await getDevInfo(client);
+          } else if (subcmd === "channelinfo") {
+            result = await getChannelInfo(client, channel);
+          } else if (subcmd === "channelstatus") {
+            result = await getChannelStatus(client);
           } else if (subcmd === "enc") {
             result = await getEnc(client, channel);
           } else {

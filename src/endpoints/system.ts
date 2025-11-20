@@ -43,6 +43,40 @@ export interface EncResponse {
 }
 
 /**
+ * Response structure from GetChnTypeInfo command
+ *
+ * Contains encoding configuration for video streams including
+ * codec, bitrate, resolution, and frame rate settings.
+ */
+export interface ChnTypeInfoResponse {
+  boardInfo?: string;
+  firmVer?: string;
+  pakSuffix?: string;
+  typeInfo?: string;
+}
+
+/**
+ * Contains status of a channel
+ */
+export interface ChannelStatusInfo {
+  channel: number;
+  name: string;
+  online: number;
+  sleep: number;
+  uid: string;
+}
+
+/**
+ * Response structure from GetChannelStatus command
+ *
+ * Contains count and array of status of each camera channel
+ */
+export interface ChannelStatus {
+  count: number;
+  status: ChannelStatusInfo[];
+}
+
+/**
  * Get device capability information
  * 
  * Queries the device's GetAbility endpoint to discover which features
@@ -118,3 +152,42 @@ export async function getEnc(
   });
 }
 
+/**
+ * Get channel information (model, firmware, etc.)
+ *
+ * Retrieves basic device identification including model number,
+ * hardware version, firmware version, and device name.
+ *
+ * @param client - An authenticated ReolinkClient instance
+ * @param channel - Camera channel number (0-based, default: 0)
+ * @returns Promise resolving to device information
+ *
+ * @example
+ * ```typescript
+ * const info = await getChannelInfo(client, channel);
+ * console.log(`Model: ${info.typeInfo}, Firmware: ${info.firmVer}`);
+ * ```
+ */
+export async function getChannelInfo(client: ReolinkClient, channel = 0): Promise<ChnTypeInfoResponse> {
+  return client.api<ChnTypeInfoResponse>("GetChnTypeInfo", {
+    channel,
+  });
+}
+
+/**
+ * Get channel status
+ *
+ * Retrieves basic status information of an NVR's camera channels
+ *
+ * @param client - An authenticated ReolinkClient instance
+ * @returns Promise resolving to device information
+ *
+ * @example
+ * ```typescript
+ * const response = await getChannelStatus(client);
+ * console.log(`Channels: ${response.count}, ${JSON.stringify(response.channels)}`);
+ * ```
+ */
+export async function getChannelStatus(client: ReolinkClient): Promise<ChannelStatus> {
+  return client.api<ChannelStatus>("GetChannelstatus", {});
+}
